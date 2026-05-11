@@ -10,7 +10,7 @@ const API_URL = 'https://tracker-api-b3jc.onrender.com'
 
 function postLocation(lat, lng, accuracy) {
   const token = localStorage.getItem('rs_token')
-  if (!token) { console.log('No token yet'); return }
+  if (!token) return
   fetch(API_URL + '/locations/', {
     method: 'POST',
     headers: {
@@ -24,11 +24,16 @@ function postLocation(lat, lng, accuracy) {
       recorded_at: new Date().toISOString()
     })
   })
-  .then(() => console.log('Location posted:', lat, lng, '±' + accuracy + 'm'))
+  .then(() => console.log('Location posted:', lat, lng, '±' + Math.round(accuracy) + 'm'))
   .catch(e => console.error('Post failed:', e))
 }
 
 function getLocation() {
+  const token = localStorage.getItem('rs_token')
+  if (!token) {
+    console.log('Waiting for token...')
+    return
+  }
   navigator.geolocation.getCurrentPosition(
     function(pos) {
       postLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy)
@@ -38,7 +43,7 @@ function getLocation() {
   )
 }
 
-// Start immediately then every 30 seconds
+// Poll every 30 seconds
 getLocation()
 setInterval(getLocation, 30000)
 
