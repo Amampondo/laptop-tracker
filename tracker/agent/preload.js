@@ -1,14 +1,22 @@
-const { contextBridge, ipcRenderer } = require('electron')
+const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('tracker', {
-  // Auth
-  login: (email, password) => ipcRenderer.invoke('login', email, password),
-  getStatus: () => ipcRenderer.invoke('get-status'),
+    login: (email, password) => ipcRenderer.invoke('login', email, password),
+    reportBattery: (percent) => ipcRenderer.invoke('battery-report', percent),
+    reportLocation: (coords) => ipcRenderer.send('geo-location', coords),
+    onAuthSuccess: (callback) => ipcRenderer.on('auth-success', callback)
+});
 
-  // Location — called from hidden renderer window
-  sendLocation: (lat, lng, accuracy) => ipcRenderer.invoke('send-location', lat, lng, accuracy),
-  locationError: (msg) => ipcRenderer.invoke('location-error', msg),
-
-  // Battery — called from hidden renderer window
-  reportBattery: (level, charging) => ipcRenderer.send('battery-report', level, charging),
-})
+// Battery listener
+window.addEventListener('DOMContentLoaded', () => {
+    if (navigator.getBattery) {
+        navigator.getBattery().then(battery => {
+            const report = () => {
+                const actualLevel = Math.round(battery.level * 100);
+                ipcRenderer.invoke('battery-report', actualLevel);
+            };
+            battery.addEventListener('levelchange', report);
+            report(); // Initial report
+        });
+    }
+});

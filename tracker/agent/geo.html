@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>RecoverSoft Asset Tracker</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body { margin: 0; padding: 0; background: #0f1117; color: white; font-family: sans-serif; }
+    #map { height: 80vh; width: 100%; }
+    .status { padding: 15px; text-align: center; background: #1a1d27; border-top: 2px solid #3b82f6; }
+    h2 { margin: 0; color: #3b82f6; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="status">
+    <h2>SECURED BY RECOVERSOFT</h2>
+    <div id="coords">Waiting for GPS fix...</div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([0, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    const marker = L.marker([0, 0]).addTo(map);
+
+    function startTracking() {
+      navigator.geolocation.watchPosition(
+        (pos) => {
+          const { latitude, longitude, accuracy } = pos.coords;
+          const latlng = [latitude, longitude];
+
+          // Update Map UI
+          map.setView(latlng, 15);
+          marker.setLatLng(latlng);
+          document.getElementById('coords').innerText = 
+            `Lat: ${latitude.toFixed(4)}, Lon: ${longitude.toFixed(4)} (Acc: ${Math.round(accuracy)}m)`;
+
+          // Send to Main Process for RecoverSoft API
+          window.tracker.reportLocation({
+            latitude,
+            longitude,
+            accuracy_metres: Math.round(accuracy)
+          });
+        },
+        (err) => {
+          document.getElementById('coords').innerText = "Error: Please allow location access.";
+          console.error(err);
+        },
+        { enableHighAccuracy: true }
+      );
+    }
+
+    startTracking();
+  </script>
+</body>
+</html>

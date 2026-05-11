@@ -12,7 +12,7 @@
   "build": {
     "appId": "com.yourorg.laptop-tracker",
     "productName": "Laptop Tracker",
-    "files": ["main.js", "preload.js", "login.html"],
+    "files": ["main.js", "preload.js", "login.html", "geo.html"],
     "win": { "target": "nsis" },
     "mac": { "target": "dmg", "category": "public.app-category.productivity" },
     "linux": { "target": "AppImage" }
