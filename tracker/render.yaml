@@ -3,7 +3,7 @@ services:
   - type: web
     name: tracker-api
     runtime: python
-    rootDir: backend
+    rootDir: tracker/backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
@@ -20,7 +20,7 @@ services:
   - type: web
     name: tracker-web
     runtime: static
-    rootDir: dashboard
+    rootDir: tracker/dashboard
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     routes:
