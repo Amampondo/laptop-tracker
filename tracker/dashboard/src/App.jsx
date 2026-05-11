@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './AuthContext'
+import { useLocationReporter } from './useLocationReporter'
 import Login from './pages/Login'
 import OrgList from './pages/OrgList'
 import OrgDetail from './pages/OrgDetail'
@@ -13,18 +14,28 @@ function Guard({ children, roles }) {
   return children
 }
 
+// Sits inside AuthProvider so it can read the logged-in user
+function TrackerCore() {
+  const { user } = useAuth()
+  useLocationReporter(user)   // starts/stops reporting as user logs in or out
+
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/orgs" element={<Guard roles={['super']}><OrgList /></Guard>} />
+      <Route path="/orgs/:orgId" element={<Guard roles={['super', 'manager']}><OrgDetail /></Guard>} />
+      <Route path="/orgs/:orgId/register" element={<Guard roles={['super', 'manager']}><RegisterUser /></Guard>} />
+      <Route path="/users/:userId" element={<Guard><UserDetail /></Guard>} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
+  )
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/orgs" element={<Guard roles={['super']}><OrgList /></Guard>} />
-          <Route path="/orgs/:orgId" element={<Guard roles={['super', 'manager']}><OrgDetail /></Guard>} />
-          <Route path="/orgs/:orgId/register" element={<Guard roles={['super', 'manager']}><RegisterUser /></Guard>} />
-          <Route path="/users/:userId" element={<Guard><UserDetail /></Guard>} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
+        <TrackerCore />
       </BrowserRouter>
     </AuthProvider>
   )
