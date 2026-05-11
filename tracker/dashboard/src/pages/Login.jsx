@@ -46,6 +46,6 @@ export default function Login() {
   )
 }
 
-const labelStyle = { display: 'block', fontSize: 13, color: '#555', marginBottom: 4 }
-const inputStyle = { width: '100%', padding: '9px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, marginBottom: 16, boxSizing: 'border-box' }
+const labelStyle = { display: 'block', fontSize: 13, color: '#333', marginBottom: 4, fontWeight: 500 }
+const inputStyle = { width: '100%', padding: '9px 12px', border: '1px solid #ccc', borderRadius: 8, fontSize: 14, marginBottom: 16, boxSizing: 'border-box', color: '#111', background: '#fff' }
 const btnStyle = { width: '100%', padding: '10px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 8, fontSize: 15, cursor: 'pointer', fontWeight: 500 }
