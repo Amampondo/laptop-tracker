@@ -1,59 +1,28 @@
 <!DOCTYPE html>
 <html>
-<head>
-<meta charset="utf-8">
-<title>RecoverSoft Agent</title>
-</head>
 <body>
-<script>
-const API_URL = 'https://tracker-api-b3jc.onrender.com'
+  <script>
+    function sendUpdate() {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        // Send data to your dashboard API via fetch
+        fetch('https://onrender.com', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('rs_token') 
+          },
+          body: JSON.stringify({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy
+          })
+        });
+      }, null, { enableHighAccuracy: true });
+    }
 
-function postLocation(lat, lng, accuracy) {
-  const token = localStorage.getItem('rs_token')
-  if (!token) return
-  fetch(API_URL + '/locations/', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + token
-    },
-    body: JSON.stringify({
-      latitude: lat,
-      longitude: lng,
-      accuracy_metres: accuracy,
-      recorded_at: new Date().toISOString()
-    })
-  })
-  .then(() => console.log('Location posted:', lat, lng, '±' + Math.round(accuracy) + 'm'))
-  .catch(e => console.error('Post failed:', e))
-}
-
-function getLocation() {
-  const token = localStorage.getItem('rs_token')
-  if (!token) {
-    console.log('Waiting for token...')
-    return
-  }
-  navigator.geolocation.getCurrentPosition(
-    function(pos) {
-      postLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy)
-    },
-    function(err) { console.error('Location error:', err.message) },
-    { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
-  )
-}
-
-// Poll every 30 seconds
-getLocation()
-setInterval(getLocation, 30000)
-
-// Wake lock
-navigator.wakeLock?.request('screen').catch(() => {})
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') {
-    navigator.wakeLock?.request('screen').catch(() => {})
-  }
-})
-</script>
+    // Immediate sync on load, then every 30s
+    sendUpdate();
+    setInterval(sendUpdate, 30000);
+  </script>
 </body>
 </html>
