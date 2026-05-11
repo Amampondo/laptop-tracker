@@ -10,10 +10,14 @@ from ..core.database import get_db
 from ..models.user import User, UserRole
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "change-me-in-production")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 8  # 8-hour sessions
+ALGORITHM  = "HS256"
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Long-lived tokens — the agent is a trusted background process on the device
+# and we never want to bother the customer with re-login prompts.
+# For web-only (browser) access the dashboard clears localStorage on logout anyway.
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 365 * 3   # 3 years
+
+pwd_context   = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
@@ -26,8 +30,8 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    to_encode  = data.copy()
+    expire     = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -62,7 +66,7 @@ def require_roles(*roles: UserRole):
 
 
 # Convenience role guards
-get_current_user = _get_current_user
-require_super = require_roles(UserRole.super_user)
-require_manager_or_above = require_roles(UserRole.super_user, UserRole.manager)
-require_any_role = require_roles(UserRole.super_user, UserRole.manager, UserRole.user)
+get_current_user          = _get_current_user
+require_super             = require_roles(UserRole.super_user)
+require_manager_or_above  = require_roles(UserRole.super_user, UserRole.manager)
+require_any_role          = require_roles(UserRole.super_user, UserRole.manager, UserRole.user)
