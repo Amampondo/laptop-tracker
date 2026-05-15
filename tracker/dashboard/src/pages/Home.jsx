@@ -194,9 +194,9 @@ export default function Home() {
         .home-nav a { color: #555; font-size: 14px; text-decoration: none; }
         .home-nav a:hover { color: #1D9E75; }
         .home-nav-links { display: flex; gap: 28px; }
-        .home-btn { background: #1D9E75; color: #fff; border: none; border-radius: 8px; padding: 8px 18px; font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: none; font-family: inherit; }
+        .home-btn { background: #1D9E75; color: #fff; border: none; border-radius: 8px; padding: 8px 18px; font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: none; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
         .home-btn:hover { background: #178a63; }
-        .home-btn-ghost { background: none; border: 1px solid #ddd; color: #333; border-radius: 8px; padding: 7px 16px; font-size: 14px; cursor: pointer; font-family: inherit; text-decoration: none; }
+        .home-btn-ghost { background: none; border: 1px solid #ddd; color: #333; border-radius: 8px; padding: 7px 16px; font-size: 14px; cursor: pointer; font-family: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: border-color 0.15s, color 0.15s; }
         .home-btn-ghost:hover { border-color: #1D9E75; color: #1D9E75; }
         .home-hero { max-width: 960px; margin: 0 auto; padding: 72px 24px 56px; text-align: center; }
         .home-hero-tag { display: inline-flex; align-items: center; gap: 7px; background: #e8f5f0; border: 1px solid #b2ddd0; color: #1D9E75; font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 20px; margin-bottom: 24px; }
@@ -230,6 +230,12 @@ export default function Home() {
         .home-req-card strong { color: #111; }
         .home-bios-note { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 10px; padding: 14px 20px; font-size: 13.5px; color: #555; line-height: 1.6; }
         .home-bios-note strong { color: #dc2626; }
+        .home-brochure-banner { background: #0d1117; padding: 48px 24px; }
+        .home-brochure-banner-inner { max-width: 960px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 32px; flex-wrap: wrap; }
+        .home-brochure-banner-text h2 { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+        .home-brochure-banner-text p { font-size: 14px; color: rgba(255,255,255,0.5); line-height: 1.6; }
+        .home-btn-download { background: #1D9E75; color: #fff; text-decoration: none; border-radius: 10px; padding: 13px 28px; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 9px; white-space: nowrap; transition: background 0.15s; font-family: inherit; border: none; cursor: pointer; }
+        .home-btn-download:hover { background: #178a63; }
         .home-contact-section { background: #fff; border-top: 1px solid #ddd; padding: 64px 24px; }
         .home-contact-inner { max-width: 520px; margin: 0 auto; text-align: center; }
         .home-contact-inner h2 { font-size: 26px; font-weight: 700; margin-bottom: 10px; }
@@ -250,10 +256,12 @@ export default function Home() {
           .home-demo-grid { grid-template-columns: 1fr; }
           .home-req-grid { grid-template-columns: 1fr; }
           .home-nav-links { display: none; }
+          .home-brochure-banner-inner { flex-direction: column; align-items: flex-start; }
         }
       `}</style>
 
       <div className="home-wrap">
+
         {/* Nav */}
         <nav className="home-nav">
           <div className="home-logo"><div className="home-logo-dot"></div> Recoversoft</div>
@@ -263,7 +271,12 @@ export default function Home() {
             <a href="#contact">Contact</a>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <a href="recoversoft-brochure.pdf" download className="home-btn-ghost">Brochure</a>
+            <a href="/recoversoft_brochure.pdf" download="Recoversoft_Brochure.pdf" className="home-btn-ghost">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Brochure
+            </a>
             <button className="home-btn-ghost" onClick={() => navigate('/login')}>Log in</button>
             <a href="#contact" className="home-btn">Get Started</a>
           </div>
@@ -278,6 +291,12 @@ export default function Home() {
           </p>
           <div className="home-hero-actions">
             <a href="#contact" className="home-btn">Get Started</a>
+            <a href="/recoversoft_brochure.pdf" download="Recoversoft_Brochure.pdf" className="home-btn-ghost">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Download Brochure
+            </a>
             <button className="home-btn-ghost" onClick={() => navigate('/login')}>Log in to Dashboard</button>
           </div>
         </section>
@@ -339,6 +358,22 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Brochure Banner */}
+        <div className="home-brochure-banner">
+          <div className="home-brochure-banner-inner">
+            <div className="home-brochure-banner-text">
+              <h2>Want a full product overview?</h2>
+              <p>Download our PDF brochure — covers all features, requirements, use cases and how to get started.</p>
+            </div>
+            <a href="/recoversoft_brochure.pdf" download="Recoversoft_Brochure.pdf" className="home-btn-download">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Download Brochure PDF
+            </a>
+          </div>
+        </div>
+
         {/* Contact */}
         <section className="home-contact-section" id="contact">
           <div className="home-contact-inner">
@@ -369,6 +404,7 @@ export default function Home() {
           <div className="home-footer-logo">Recoversoft</div>
           <span>© 2026 Recoversoft</span>
         </footer>
+
       </div>
     </>
   )
