@@ -40,6 +40,13 @@ export default function UserDetail() {
   const [fences, setFences]             = useState([])
   const [fenceViolations, setFenceViolations] = useState([]) // fence names device is currently outside
 
+  // ── Clear tracks state ──
+  const [showClear, setShowClear]       = useState(false)
+  const [clearFrom, setClearFrom]       = useState('')
+  const [clearTo, setClearTo]           = useState('')
+  const [clearing, setClearing]         = useState(false)
+  const [clearResult, setClearResult]   = useState(null) // { deleted: N } | { error }
+
   // ── Map refs ──
   const mapRef         = useRef(null)
   const mapInstanceRef = useRef(null)
@@ -225,6 +232,28 @@ export default function UserDetail() {
     saveFences(userId, updated)
   }
 
+  // ── Clear tracks ──────────────────────────────────────────────────────────────
+  async function clearTracks() {
+    if (!clearFrom || !clearTo) return
+    if (!window.confirm(`Delete all tracks for ${profile?.full_name} between ${clearFrom} and ${clearTo}? This cannot be undone.`)) return
+    setClearing(true)
+    setClearResult(null)
+    try {
+      const from_dt = new Date(clearFrom).toISOString()
+      const to_dt   = new Date(clearTo + 'T23:59:59').toISOString()
+      const { data } = await api.delete(`/locations/history/${userId}`, { params: { from_dt, to_dt } })
+      setClearResult({ deleted: data.deleted })
+      // Reload history after clearing
+      const res = await api.get(`/locations/history/${userId}?limit=500`)
+      setHistory(res.data.points)
+      setReplayIdx(0)
+    } catch (err) {
+      setClearResult({ error: err.response?.data?.detail || 'Failed to clear tracks' })
+    } finally {
+      setClearing(false)
+    }
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
   const currentPoint = history[replayIdx]
 
@@ -367,6 +396,66 @@ export default function UserDetail() {
                 </div>
               ))}
             </div>
+
+            {/* ── Clear Tracks ── */}
+            <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid #f0f0ef' }}>
+              <div style={sectionLabel}>Clear Tracks</div>
+              {!showClear ? (
+                <button
+                  onClick={() => { setShowClear(true); setClearResult(null) }}
+                  style={{ ...replayBtn, background: '#f0f0ef', color: '#555', width: '100%', fontSize: 13 }}
+                >
+                  🗑 Clear date range
+                </button>
+              ) : (
+                <div>
+                  <div style={{ marginBottom: 8 }}>
+                    <label style={inputLabel}>From</label>
+                    <input
+                      type="date"
+                      value={clearFrom}
+                      onChange={e => setClearFrom(e.target.value)}
+                      style={dateInput}
+                    />
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={inputLabel}>To</label>
+                    <input
+                      type="date"
+                      value={clearTo}
+                      onChange={e => setClearTo(e.target.value)}
+                      style={dateInput}
+                    />
+                  </div>
+                  {clearResult && (
+                    <div style={{
+                      fontSize: 12, marginBottom: 10, padding: '7px 10px', borderRadius: 6,
+                      background: clearResult.error ? '#fef2f2' : '#f0fdf4',
+                      color: clearResult.error ? '#dc2626' : '#15803d',
+                      border: `1px solid ${clearResult.error ? '#fca5a5' : '#bbf7d0'}`
+                    }}>
+                      {clearResult.error ? `⚠ ${clearResult.error}` : `✓ Deleted ${clearResult.deleted} point${clearResult.deleted !== 1 ? 's' : ''}`}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      onClick={clearTracks}
+                      disabled={!clearFrom || !clearTo || clearing}
+                      style={{ ...replayBtn, flex: 1, background: '#dc2626', fontSize: 13, opacity: (!clearFrom || !clearTo) ? 0.5 : 1 }}
+                    >
+                      {clearing ? 'Clearing…' : 'Clear'}
+                    </button>
+                    <button
+                      onClick={() => { setShowClear(false); setClearResult(null) }}
+                      style={{ ...ghostBtn, fontSize: 13 }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
 
@@ -381,3 +470,5 @@ const headerStyle  = { background: '#fff', borderBottom: '1px solid #eee', paddi
 const ghostBtn     = { background: 'none', border: '1px solid #ddd', borderRadius: 6, padding: '5px 12px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }
 const replayBtn    = { padding: '9px 12px', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, cursor: 'pointer', fontWeight: 500, fontFamily: 'inherit' }
 const sectionLabel = { fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }
+const inputLabel   = { display: 'block', fontSize: 12, color: '#555', marginBottom: 4, fontWeight: 500 }
+const dateInput    = { width: '100%', padding: '7px 10px', border: '1px solid #ddd', borderRadius: 7, fontSize: 13, fontFamily: 'inherit', color: '#111', outline: 'none' }
