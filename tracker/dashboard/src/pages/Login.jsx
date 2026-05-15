@@ -29,7 +29,7 @@ export default function Login() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f4' }}>
       <div style={{ background: '#fff', borderRadius: 12, padding: 40, width: 360, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 500, marginBottom: 8 }}>Laptop Tracker</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 500, marginBottom: 8 }}>recoversoft</h1>
         <p style={{ color: '#888', marginBottom: 28, fontSize: 14 }}>Sign in to your account</p>
         <form onSubmit={handleSubmit}>
           <label style={labelStyle}>Email</label>
