@@ -12,29 +12,18 @@ L.Icon.Default.mergeOptions({
   shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
-// ── Geo-fence storage helpers (per org) ───────────────────────────────────────
-function fenceKey(oid) { return `geofence_org_${oid}` }
-function loadFences(oid) {
-  try { return JSON.parse(localStorage.getItem(fenceKey(oid))) || [] } catch { return [] }
-}
-function saveFences(oid, fences) {
-  localStorage.setItem(fenceKey(oid), JSON.stringify(fences))
-}
-
 export default function OrgDetail() {
-  const { orgId }  = useParams()
+  const { orgId }        = useParams()
   const { user, logout } = useAuth()
-  const navigate   = useNavigate()
+  const navigate         = useNavigate()
 
-  const [tab, setTab]           = useState('map')
-  const [org, setOrg]           = useState(null)
-  const [mapData, setMapData]   = useState([])
-  const [users, setUsers]       = useState([])
-  const [fences, setFences]     = useState([])
+  const [tab, setTab]       = useState('map')
+  const [org, setOrg]       = useState(null)
+  const [mapData, setMapData] = useState([])
+  const [users, setUsers]   = useState([])
+  const [fences, setFences] = useState([])
   const [drawingFence, setDrawingFence] = useState(false)
-
-  // violations: { userName, fenceName }[]
-  const [violations, setViolations] = useState([])
+  const [violations, setViolations]     = useState([])
 
   const mapRef         = useRef(null)
   const mapInstanceRef = useRef(null)
@@ -48,7 +37,7 @@ export default function OrgDetail() {
     api.get(`/organisations/${orgId}`).then(r => setOrg(r.data))
     api.get(`/organisations/${orgId}/users`).then(r => setUsers(r.data))
     api.get(`/locations/map/${orgId}`).then(r => setMapData(r.data))
-    setFences(loadFences(orgId))
+    api.get(`/geofences/org/${orgId}`).then(r => setFences(r.data))
   }, [orgId])
 
   // ── Init map ───────────────────────────────────────────────────────────────
@@ -60,8 +49,6 @@ export default function OrgDetail() {
         attribution: '© OpenStreetMap contributors'
       }).addTo(mapInstanceRef.current)
     }
-
-    // place device markers
     markersRef.current.forEach(m => m.remove())
     markersRef.current = []
     mapData.forEach(({ user: u, latest }) => {
@@ -72,16 +59,12 @@ export default function OrgDetail() {
         .on('click', () => navigate(`/users/${u.id}`))
       markersRef.current.push(marker)
     })
-
     if (markersRef.current.length) {
-      const group = L.featureGroup(markersRef.current)
-      mapInstanceRef.current.fitBounds(group.getBounds().pad(0.2))
+      mapInstanceRef.current.fitBounds(L.featureGroup(markersRef.current).getBounds().pad(0.2))
     }
-
-    checkAllViolations()
   }, [tab, mapData])
 
-  // ── Render fences on map ───────────────────────────────────────────────────
+  // ── Render fences ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (!mapInstanceRef.current) return
     fenceLayersRef.current.forEach(l => l.remove())
@@ -101,8 +84,7 @@ export default function OrgDetail() {
       if (!latest) return
       const latlng = L.latLng(latest.latitude, latest.longitude)
       fences.forEach(fence => {
-        const poly = L.polygon(fence.points)
-        if (!poly.getBounds().contains(latlng)) {
+        if (!L.polygon(fence.points).getBounds().contains(latlng)) {
           v.push({ userName: u.full_name, fenceName: fence.name })
         }
       })
@@ -136,7 +118,7 @@ export default function OrgDetail() {
 
   function onMapDblClick(e) { L.DomEvent.stop(e); finishDrawing() }
 
-  function finishDrawing() {
+  async function finishDrawing() {
     const map = mapInstanceRef.current
     map.off('click', onMapClick)
     map.off('dblclick', onMapDblClick)
@@ -147,10 +129,19 @@ export default function OrgDetail() {
 
     if (drawPointsRef.current.length < 3) { setDrawingFence(false); return }
 
-    const name    = prompt('Name this geo-fence zone:') || 'Zone'
-    const updated = [...fences, { id: Date.now(), name, points: [...drawPointsRef.current] }]
-    setFences(updated)
-    saveFences(orgId, updated)
+    const name = prompt('Name this geo-fence zone:')
+    if (!name) { setDrawingFence(false); return }
+
+    try {
+      const { data } = await api.post('/geofences/', {
+        name,
+        points: [...drawPointsRef.current],
+        org_id: orgId,
+      })
+      setFences(prev => [...prev, data])
+    } catch (e) {
+      alert('Failed to save fence: ' + (e.response?.data?.detail || e.message))
+    }
     drawPointsRef.current = []
     setDrawingFence(false)
   }
@@ -168,13 +159,15 @@ export default function OrgDetail() {
     setDrawingFence(false)
   }
 
-  function deleteFence(id) {
-    const updated = fences.filter(f => f.id !== id)
-    setFences(updated)
-    saveFences(orgId, updated)
+  async function deleteFence(id) {
+    try {
+      await api.delete(`/geofences/${id}`)
+      setFences(prev => prev.filter(f => f.id !== id))
+    } catch (e) {
+      alert('Failed to delete fence')
+    }
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', background: '#f5f5f4' }}>
       <header style={headerStyle}>
@@ -198,7 +191,7 @@ export default function OrgDetail() {
             borderBottom: tab === t ? '2px solid #1D9E75' : '2px solid transparent',
             color: tab === t ? '#1D9E75' : '#555'
           }}>
-            {t === 'map' ? 'Device map' : t === 'fences' ? `Geo-fences ${fences.length ? `(${fences.length})` : ''}` : 'Users'}
+            {t === 'map' ? 'Device map' : t === 'fences' ? `Geo-fences${fences.length ? ` (${fences.length})` : ''}` : 'Users'}
           </button>
         ))}
         {(user?.role === 'super' || user?.role === 'manager') && (
@@ -208,12 +201,10 @@ export default function OrgDetail() {
         )}
       </div>
 
-      {/* ── Map tab ── */}
+      {/* Map tab */}
       {tab === 'map' && (
         <div style={{ display: 'flex', height: 'calc(100vh - 115px)' }}>
           <div ref={mapRef} style={{ flex: 1 }} />
-
-          {/* Map sidebar */}
           <div style={{ width: 260, background: '#fff', borderLeft: '1px solid #eee', padding: 20, overflowY: 'auto', flexShrink: 0 }}>
             <div style={sectionLabel}>Devices</div>
             <div style={{ fontSize: 22, fontWeight: 600, marginBottom: 4 }}>{mapData.length}</div>
@@ -232,42 +223,38 @@ export default function OrgDetail() {
 
             <div style={sectionLabel}>Geo-fences</div>
             {!drawingFence ? (
-              <button onClick={startDrawing} style={{ ...replayBtn, background: '#f59e0b', width: '100%', marginBottom: 12 }}>
+              <button onClick={startDrawing} style={{ ...actionBtn, background: '#f59e0b', width: '100%', marginBottom: 10 }}>
                 ✏ Draw fence
               </button>
             ) : (
-              <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 13, color: '#92400e' }}>
+              <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 8, padding: 10, marginBottom: 10, fontSize: 13, color: '#92400e' }}>
                 <div style={{ fontWeight: 500, marginBottom: 4 }}>Drawing mode</div>
                 Click to add points. Double-click to finish.
                 <br/>
-                <button onClick={cancelDrawing} style={{ marginTop: 8, background: 'none', border: '1px solid #fcd34d', borderRadius: 5, padding: '3px 10px', fontSize: 12, cursor: 'pointer', color: '#92400e' }}>
-                  Cancel
-                </button>
+                <button onClick={cancelDrawing} style={{ marginTop: 8, background: 'none', border: '1px solid #fcd34d', borderRadius: 5, padding: '3px 10px', fontSize: 12, cursor: 'pointer', color: '#92400e' }}>Cancel</button>
               </div>
             )}
-
-            {fences.length === 0 && !drawingFence && (
-              <div style={{ fontSize: 13, color: '#aaa' }}>No fences yet.</div>
-            )}
+            {fences.length === 0 && !drawingFence && <div style={{ fontSize: 13, color: '#aaa' }}>No fences yet.</div>}
             {fences.map(fence => (
               <div key={fence.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: '#f9f9f8', borderRadius: 7, marginBottom: 6, fontSize: 13 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                   <span style={{ color: '#f59e0b' }}>⬡</span>
-                  <span style={{ color: '#333' }}>{fence.name}</span>
+                  <span>{fence.name}</span>
                 </div>
-                <button onClick={() => deleteFence(fence.id)} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: 15, lineHeight: 1 }}>×</button>
+                <button onClick={() => deleteFence(fence.id)} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: 15 }}>×</button>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* ── Fences tab ── */}
+      {/* Fences tab */}
       {tab === 'fences' && (
         <main style={{ maxWidth: 760, margin: '0 auto', padding: '28px 24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <h2 style={{ fontSize: 20, fontWeight: 600, color: '#111', margin: 0 }}>Geo-fences</h2>
-            <button onClick={() => { setTab('map'); setTimeout(startDrawing, 200) }} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 14, cursor: 'pointer', fontWeight: 500 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>Geo-fences</h2>
+            <button onClick={() => { setTab('map'); setTimeout(startDrawing, 200) }}
+              style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 14, cursor: 'pointer', fontWeight: 500 }}>
               ✏ Draw new fence
             </button>
           </div>
@@ -278,7 +265,7 @@ export default function OrgDetail() {
               {fences.map(fence => (
                 <div key={fence.id} style={{ background: '#fff', border: '1px solid #ddd', borderRadius: 10, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontWeight: 500, color: '#111' }}>{fence.name}</div>
+                    <div style={{ fontWeight: 500 }}>{fence.name}</div>
                     <div style={{ fontSize: 13, color: '#aaa', marginTop: 2 }}>{fence.points.length} vertices</div>
                   </div>
                   <button onClick={() => deleteFence(fence.id)} style={{ background: 'none', border: '1px solid #eee', borderRadius: 6, padding: '5px 12px', fontSize: 13, cursor: 'pointer', color: '#dc2626' }}>
@@ -291,7 +278,7 @@ export default function OrgDetail() {
         </main>
       )}
 
-      {/* ── Users tab ── */}
+      {/* Users tab */}
       {tab === 'users' && (
         <main style={{ maxWidth: 760, margin: '0 auto', padding: '28px 24px' }}>
           <div style={{ display: 'grid', gap: 10 }}>
@@ -314,6 +301,6 @@ export default function OrgDetail() {
 const headerStyle  = { background: '#fff', borderBottom: '1px solid #eee', padding: '14px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }
 const tabBtn       = { background: 'none', border: 'none', padding: '14px 16px', fontSize: 14, cursor: 'pointer', fontWeight: 500, fontFamily: 'inherit' }
 const ghostBtn     = { background: 'none', border: '1px solid #ddd', borderRadius: 6, padding: '5px 12px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }
-const replayBtn    = { padding: '9px 12px', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, cursor: 'pointer', fontWeight: 500, fontFamily: 'inherit' }
+const actionBtn    = { padding: '9px 12px', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, cursor: 'pointer', fontWeight: 500, fontFamily: 'inherit' }
 const cardStyle    = { background: '#fff', border: '1px solid #eee', borderRadius: 10, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }
 const sectionLabel = { fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }
